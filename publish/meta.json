@@ -1,0 +1,15 @@
+{
+  "guid": "7b2c9e41-5f8a-4d3e-9c1b-0a2b3c4d5e6f",
+  "name": "Debrid / Stremio streams",
+  "description": "Stremio-style stream addon + Real-Debrid or TorBox for library movies and episodes (IMDb required).",
+  "overview": "Adds an optional playback source by querying a Stremio-compatible addon, then resolving streams through Real-Debrid or TorBox. You must comply with applicable laws and service terms.",
+  "owner": "killamfkr",
+  "category": "General",
+  "changelog": "",
+  "targetAbi": "10.10.0",
+  "version": "1.0.0",
+  "timestamp": "2026-03-25T00:00:00Z",
+  "status": "Active",
+  "autoUpdate": false,
+  "assemblies": [ "Jellyfin.Plugin.DebridStream.dll" ]
+}
