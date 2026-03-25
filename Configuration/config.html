@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debrid / Stremio streams</title>
+</head>
+<body>
+    <div id="configPage" data-role="page" class="page type-interior pluginConfigurationPage configPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+        <div data-role="content">
+            <div class="content-primary">
+                <h1>Debrid / Stremio streams</h1>
+                <p class="fieldDescription">
+                    Adds an optional playback source for <strong>movies</strong> and <strong>TV episodes</strong> that have an <strong>IMDb id</strong>.
+                    The server requests streams from a Stremio-style addon URL, then resolves magnets or links through Real-Debrid or TorBox.
+                    You are responsible for complying with laws and service terms.
+                </p>
+                <form class="configForm">
+                    <label class="checkboxContainer">
+                        <input is="emby-checkbox" type="checkbox" id="enableDebridStreams" />
+                        <span>Enable debrid stream source for library movies and episodes</span>
+                    </label>
+                    <br />
+                    <div class="selectContainer">
+                        <label for="debridBackend">Debrid backend</label>
+                        <select is="emby-select" id="debridBackend" data-mini="true">
+                            <option value="0">Real-Debrid</option>
+                            <option value="1">TorBox (magnets only)</option>
+                        </select>
+                    </div>
+                    <div class="inputContainer">
+                        <label for="realDebridToken">Real-Debrid API token</label>
+                        <input is="emby-input" type="password" id="realDebridToken" />
+                    </div>
+                    <div class="inputContainer">
+                        <label for="torBoxKey">TorBox API key</label>
+                        <input is="emby-input" type="password" id="torBoxKey" />
+                    </div>
+                    <div class="inputContainer">
+                        <label for="streamAddonBaseUrl">Stream addon base URL (no trailing slash)</label>
+                        <input is="emby-input" type="text" id="streamAddonBaseUrl" placeholder="https://torrentio.strem.fun" />
+                    </div>
+                    <div class="inputContainer">
+                        <label for="maxStreamCandidates">Max stream candidates to try</label>
+                        <input is="emby-input" type="number" id="maxStreamCandidates" min="1" max="24" />
+                    </div>
+                    <br />
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block"><span>Save</span></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script type="text/javascript">
+            var PluginConfig = {
+                pluginId: "7b2c9e41-5f8a-4d3e-9c1b-0a2b3c4d5e6f"
+            };
+
+            document.querySelector('.configPage')
+                .addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(PluginConfig.pluginId).then(function (config) {
+                        document.querySelector('#enableDebridStreams').checked = config.EnableDebridStreams;
+                        document.querySelector('#debridBackend').value = config.DebridBackend;
+                        document.querySelector('#realDebridToken').value = config.RealDebridApiToken || '';
+                        document.querySelector('#torBoxKey').value = config.TorBoxApiKey || '';
+                        document.querySelector('#streamAddonBaseUrl').value = config.StreamAddonBaseUrl || '';
+                        document.querySelector('#maxStreamCandidates').value = config.MaxStreamCandidates || 8;
+                        Dashboard.hideLoadingMsg();
+                    });
+                });
+
+            document.querySelector('.configForm')
+                .addEventListener('submit', function (e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(PluginConfig.pluginId).then(function (config) {
+                        config.EnableDebridStreams = document.querySelector('#enableDebridStreams').checked;
+                        config.DebridBackend = parseInt(document.querySelector('#debridBackend').value, 10);
+                        config.RealDebridApiToken = document.querySelector('#realDebridToken').value;
+                        config.TorBoxApiKey = document.querySelector('#torBoxKey').value;
+                        config.StreamAddonBaseUrl = document.querySelector('#streamAddonBaseUrl').value.trim();
+                        config.MaxStreamCandidates = parseInt(document.querySelector('#maxStreamCandidates').value, 10) || 8;
+                        ApiClient.updatePluginConfiguration(PluginConfig.pluginId, config).then(Dashboard.processPluginConfigurationUpdateResult);
+                    });
+                    e.preventDefault();
+                    return false;
+                });
+        </script>
+    </div>
+</body>
+</html>

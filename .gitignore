@@ -1,0 +1,20 @@
+# Build
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+out/
+artifacts/
+*.user
+*.suo
+.vs/
+.idea/
+
+# NuGet
+*.nupkg
+**/packages/
+
+# OS
+Thumbs.db
+Desktop.ini

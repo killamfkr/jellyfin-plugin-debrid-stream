@@ -1,0 +1,28 @@
+name: Build plugin
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Publish
+        run: dotnet publish -c Release -o "${{ github.workspace }}/out"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jellyfin-plugin-debrid-stream
+          path: |
+            out/Jellyfin.Plugin.DebridStream.dll
+            out/meta.json
