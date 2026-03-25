@@ -15,6 +15,9 @@ artifacts/
 *.nupkg
 **/packages/
 
+# Accidental nested clone / copy of this repo inside itself
+jellyfin-plugin-debrid-stream/
+
 # OS
 Thumbs.db
 Desktop.ini
