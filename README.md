@@ -17,6 +17,14 @@ cd jellyfin-plugin-debrid-stream
 
 ## Build
 
+**If `dotnet` is not found in PowerShell** (common in some IDE terminals), either:
+
+- Run **`.\publish.ps1`** from this folder (finds `dotnet.exe` automatically), or  
+- Use the full path:  
+  `"${env:ProgramFiles}\dotnet\dotnet.exe" publish -c Release -o ./publish`
+
+Add `C:\Program Files\dotnet` to your **user** PATH once: Settings → System → About → Advanced system settings → Environment variables → Path → Edit → New → `C:\Program Files\dotnet` → OK, then **open a new terminal**.
+
 ```bash
 dotnet publish -c Release -o ./publish
 ```
