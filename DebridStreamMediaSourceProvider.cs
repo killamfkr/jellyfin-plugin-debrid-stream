@@ -83,7 +83,7 @@ public sealed class DebridStreamMediaSourceProvider : IMediaSourceProvider
         {
             Id = "debridstream-" + item.Id.ToString("N", CultureInfo.InvariantCulture),
             Name = "Debrid / Stremio stream",
-            Protocol = MediaProtocol.Http,
+            Protocol = global::MediaBrowser.Model.MediaInfo.MediaProtocol.Http,
             Path = string.Empty,
             IsRemote = true,
             RequiresOpening = true,
@@ -129,13 +129,13 @@ public sealed class DebridStreamMediaSourceProvider : IMediaSourceProvider
         var item = _libraryManager.GetItemById(itemId)
                    ?? throw new KeyNotFoundException("Library item not found: " + itemId);
 
-        var descriptor = GetStremioDescriptor(item)
-                         ?? throw new InvalidOperationException("Item has no IMDb id for Stremio stream lookup.");
+        var (stremioType, stremioVideoId) = GetStremioDescriptor(item)
+            ?? throw new InvalidOperationException("Item has no IMDb id for Stremio stream lookup.");
 
         var candidates = await _stremioClient.GetStreamUrlsAsync(
             config.StreamAddonBaseUrl,
-            descriptor.Value.Type,
-            descriptor.Value.VideoId,
+            stremioType,
+            stremioVideoId,
             Math.Clamp(config.MaxStreamCandidates, 1, 24),
             cancellationToken).ConfigureAwait(false);
 
@@ -196,7 +196,7 @@ public sealed class DebridStreamMediaSourceProvider : IMediaSourceProvider
         {
             Id = "debridstream-opened-" + item.Id.ToString("N", CultureInfo.InvariantCulture),
             Name = "Debrid / Stremio stream",
-            Protocol = MediaProtocol.Http,
+            Protocol = global::MediaBrowser.Model.MediaInfo.MediaProtocol.Http,
             Path = playbackUrl,
             IsRemote = true,
             RequiresOpening = false,
