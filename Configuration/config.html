@@ -9,9 +9,9 @@
             <div class="content-primary">
                 <h1>Debrid / Stremio streams</h1>
                 <p class="fieldDescription">
-                    Adds an optional playback source for <strong>movies</strong> and <strong>TV episodes</strong> that have an <strong>IMDb id</strong>.
-                    The server requests streams from a Stremio-style addon URL, then resolves magnets or links through Real-Debrid or TorBox.
-                    You are responsible for complying with laws and service terms.
+                    For each library <strong>movie</strong> or <strong>episode</strong>, the server asks your Stremio-style addon for a stream list and shows <strong>each line as its own playable source</strong> (pick a link like in other streaming UIs).
+                    Items need an <strong>IMDb id</strong> on the movie / series, or a <strong>TMDB / TVDB id</strong> plus an optional TMDB API key below so the server can resolve IMDb via TMDB (no local IMDb/TVDB database is bundled).
+                    Playback uses Real-Debrid or TorBox. You are responsible for complying with laws and service terms.
                 </p>
                 <form class="configForm">
                     <label class="checkboxContainer">
@@ -39,8 +39,19 @@
                         <input is="emby-input" type="text" id="streamAddonBaseUrl" placeholder="https://torrentio.strem.fun" />
                     </div>
                     <div class="inputContainer">
-                        <label for="maxStreamCandidates">Max stream candidates to try</label>
-                        <input is="emby-input" type="number" id="maxStreamCandidates" min="1" max="24" />
+                        <label for="maxStreamCandidates">Max streams to list (picker entries)</label>
+                        <input is="emby-input" type="number" id="maxStreamCandidates" min="1" max="48" />
+                        <div class="fieldDescription">Each entry appears as a separate version/source in the client (capped for performance).</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label for="tmdbApiKey">TMDB API key (optional)</label>
+                        <input is="emby-input" type="password" id="tmdbApiKey" autocomplete="off" />
+                        <div class="fieldDescription">Free key from themoviedb.org — used only to map TMDB/TVDB metadata on your items to IMDb for the stream addon.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label for="streamListCacheSeconds">Stream list cache (seconds)</label>
+                        <input is="emby-input" type="number" id="streamListCacheSeconds" min="0" max="3600" />
+                        <div class="fieldDescription">How long to cache the addon’s stream list per item (0 = fetch every time).</div>
                     </div>
                     <br />
                     <div>
@@ -64,6 +75,8 @@
                         document.querySelector('#torBoxKey').value = config.TorBoxApiKey || '';
                         document.querySelector('#streamAddonBaseUrl').value = config.StreamAddonBaseUrl || '';
                         document.querySelector('#maxStreamCandidates').value = config.MaxStreamCandidates || 8;
+                        document.querySelector('#tmdbApiKey').value = config.TmdbApiKey || '';
+                        document.querySelector('#streamListCacheSeconds').value = (config.StreamListCacheSeconds ?? 120);
                         Dashboard.hideLoadingMsg();
                     });
                 });
@@ -78,6 +91,11 @@
                         config.TorBoxApiKey = document.querySelector('#torBoxKey').value;
                         config.StreamAddonBaseUrl = document.querySelector('#streamAddonBaseUrl').value.trim();
                         config.MaxStreamCandidates = parseInt(document.querySelector('#maxStreamCandidates').value, 10) || 8;
+                        config.TmdbApiKey = document.querySelector('#tmdbApiKey').value;
+                        config.StreamListCacheSeconds = parseInt(document.querySelector('#streamListCacheSeconds').value, 10);
+                        if (isNaN(config.StreamListCacheSeconds)) {
+                            config.StreamListCacheSeconds = 120;
+                        }
                         ApiClient.updatePluginConfiguration(PluginConfig.pluginId, config).then(Dashboard.processPluginConfigurationUpdateResult);
                     });
                     e.preventDefault();

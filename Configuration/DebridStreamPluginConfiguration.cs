@@ -37,4 +37,14 @@ public class DebridStreamPluginConfiguration : BasePluginConfiguration
     /// Gets or sets how many stream candidates to try in order from the addon response.
     /// </summary>
     public int MaxStreamCandidates { get; set; } = 8;
+
+    /// <summary>
+    /// Gets or sets the TMDB v3 API key (optional). Used to resolve IMDb ids when items only have TMDB or TVDB ids.
+    /// </summary>
+    public string TmdbApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets how long to cache the addon stream list per item (seconds). 0 disables caching.
+    /// </summary>
+    public int StreamListCacheSeconds { get; set; } = 120;
 }

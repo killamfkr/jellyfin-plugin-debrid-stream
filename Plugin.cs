@@ -34,7 +34,7 @@ public class Plugin : BasePlugin<DebridStreamPluginConfiguration>, IHasWebPages
 
     /// <inheritdoc />
     public override string Description =>
-        "Adds optional playback sources for movies and TV episodes by querying a Stremio-style stream addon, then resolving magnets or hoster links through Real-Debrid or TorBox.";
+        "Lists streams from a Stremio-style addon as separate playable sources (link picker). Maps IMDb from metadata or TMDB/TVDB via optional TMDB API; resolves through Real-Debrid or TorBox.";
 
     /// <inheritdoc />
     public override string ConfigurationFileName => "Jellyfin.Plugin.DebridStream.xml";

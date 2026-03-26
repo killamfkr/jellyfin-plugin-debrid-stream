@@ -22,17 +22,16 @@ public sealed class StremioAddonStreamClient
     }
 
     /// <summary>
-    /// Gets candidate playback URLs or magnets from the addon.
+    /// Gets stream entries (URL + display label) from the addon, up to <paramref name="maxEntries"/>.
     /// </summary>
-    public async Task<IReadOnlyList<string>> GetStreamUrlsAsync(
+    public async Task<IReadOnlyList<StremioStreamEntry>> GetStreamEntriesAsync(
         string addonBaseUrl,
         string stremioType,
         string stremioVideoId,
-        int maxCandidates,
+        int maxEntries,
         CancellationToken cancellationToken)
     {
         var baseUrl = addonBaseUrl.TrimEnd('/');
-        // Stremio ids use colons (e.g. series tt123:1:2); keep path literal like official clients.
         var url = $"{baseUrl}/stream/{stremioType}/{stremioVideoId}.json";
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -55,21 +54,79 @@ public sealed class StremioAddonStreamClient
             return [];
         }
 
-        var results = new List<string>();
+        var results = new List<StremioStreamEntry>();
+        var index = 0;
         foreach (var el in streams.EnumerateArray())
         {
-            if (results.Count >= maxCandidates)
+            if (results.Count >= maxEntries)
             {
                 break;
             }
 
-            if (TryGetUrl(el, out var u) && !string.IsNullOrWhiteSpace(u))
+            if (!TryGetUrl(el, out var u) || string.IsNullOrWhiteSpace(u))
             {
-                results.Add(u.Trim());
+                continue;
             }
+
+            index++;
+            var label = BuildDisplayName(el, index);
+            results.Add(new StremioStreamEntry
+            {
+                Url = u.Trim(),
+                DisplayName = label
+            });
         }
 
         return results;
+    }
+
+    private static string BuildDisplayName(JsonElement stream, int ordinal)
+    {
+        var parts = new List<string>();
+
+        if (TryGetString(stream, "title", out var title) && !string.IsNullOrWhiteSpace(title))
+        {
+            parts.Add(title.Trim());
+        }
+
+        if (TryGetString(stream, "name", out var name) && !string.IsNullOrWhiteSpace(name))
+        {
+            var t = name.Trim();
+            if (parts.Count == 0 || !string.Equals(parts[0], t, StringComparison.Ordinal))
+            {
+                parts.Add(t);
+            }
+        }
+
+        if (parts.Count == 0 && TryGetString(stream, "description", out var desc) && !string.IsNullOrWhiteSpace(desc))
+        {
+            var d = desc.Trim();
+            if (d.Length > 120)
+            {
+                d = d[..120] + "…";
+            }
+
+            parts.Add(d);
+        }
+
+        if (parts.Count == 0)
+        {
+            return FormattableString.Invariant($"Stream {ordinal}");
+        }
+
+        return string.Join(" — ", parts);
+    }
+
+    private static bool TryGetString(JsonElement el, string property, out string value)
+    {
+        value = string.Empty;
+        if (!el.TryGetProperty(property, out var p) || p.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = p.GetString() ?? string.Empty;
+        return !string.IsNullOrEmpty(value);
     }
 
     private static bool TryGetUrl(JsonElement stream, out string? url)
@@ -81,7 +138,6 @@ public sealed class StremioAddonStreamClient
             return !string.IsNullOrEmpty(url);
         }
 
-        // Some addons use externalUrl
         if (stream.TryGetProperty("externalUrl", out var ext) && ext.ValueKind == JsonValueKind.String)
         {
             url = ext.GetString();
