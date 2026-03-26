@@ -12,7 +12,7 @@
         "changelog": "Stream discovery: save TMDB API key on the discovery page; clearer setup messages.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/killamfkr/jellyfin-plugin-debrid-stream/releases/download/v1.2.0.1/DebridStream_1.2.0.1.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "0147718327853377585a75c8bb56b0e6",
         "timestamp": "2026-03-27T00:00:00Z"
       },
       {
