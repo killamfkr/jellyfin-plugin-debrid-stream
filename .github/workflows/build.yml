@@ -22,10 +22,10 @@ jobs:
       - name: Zip for Jellyfin catalog (Linux zip — MD5 may differ from Windows)
         run: |
           cd out
-          zip -q ../DebridStream_1.0.0.0.zip Jellyfin.Plugin.DebridStream.dll meta.json
+          zip -q ../DebridStream_1.2.0.0.zip Jellyfin.Plugin.DebridStream.dll meta.json
           cd ..
-          echo "MD5 of DebridStream_1.0.0.0.zip (update manifest.json checksum if you attach this zip to a release):"
-          md5sum DebridStream_1.0.0.0.zip
+          echo "MD5 of DebridStream_1.2.0.0.zip (for manifest 1.2.0.0 entry or release workflow):"
+          md5sum DebridStream_1.2.0.0.zip
 
       - name: Upload artifact (dll + meta)
         uses: actions/upload-artifact@v4
@@ -38,5 +38,5 @@ jobs:
       - name: Upload artifact (catalog zip)
         uses: actions/upload-artifact@v4
         with:
-          name: DebridStream_1.0.0.0.zip
-          path: DebridStream_1.0.0.0.zip
+          name: DebridStream_1.2.0.0.zip
+          path: DebridStream_1.2.0.0.zip

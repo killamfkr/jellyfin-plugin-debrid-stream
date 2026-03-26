@@ -1,7 +1,7 @@
-# Run manually: Actions → "Publish release v1.0.0.0" → Run workflow
-# Creates tag v1.0.0.0, uploads DebridStream_1.0.0.0.zip, updates manifest.json checksum on main.
+# Run manually: Actions → "Publish plugin release" → Run workflow
+# Builds DebridStream_1.2.0.0.zip, updates manifest checksum for 1.2.0.0, pushes main, creates tag v1.2.0.0 + release.
 
-name: Publish release v1.0.0.0
+name: Publish plugin release
 
 on:
   workflow_dispatch:
@@ -10,12 +10,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-v1
+  group: release-plugin
   cancel-in-progress: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      PLUGIN_VER: "1.2.0.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,16 +36,18 @@ jobs:
       - name: Build zip
         run: |
           cd out
-          zip -q ../DebridStream_1.0.0.0.zip Jellyfin.Plugin.DebridStream.dll meta.json
+          zip -q "../DebridStream_${PLUGIN_VER}.zip" Jellyfin.Plugin.DebridStream.dll meta.json
           cd ..
-          md5sum DebridStream_1.0.0.0.zip
+          md5sum "DebridStream_${PLUGIN_VER}.zip"
 
-      - name: Update manifest.json checksum
+      - name: Update manifest.json checksum (version ${{ env.PLUGIN_VER }})
         run: |
-          NEW=$(md5sum DebridStream_1.0.0.0.zip | awk '{print $1}')
-          echo "New checksum: $NEW"
-          sed -i "s/\"checksum\": \"[a-fA-F0-9]*\"/\"checksum\": \"$NEW\"/" manifest.json
-          grep checksum manifest.json
+          NEW=$(md5sum "DebridStream_${PLUGIN_VER}.zip" | awk '{print $1}')
+          echo "New checksum for ${PLUGIN_VER}: $NEW"
+          jq --arg c "$NEW" --arg v "${PLUGIN_VER}" \
+            '(.[0].versions |= map(if .version == $v then .checksum = $c else . end))' manifest.json > manifest.tmp
+          mv manifest.tmp manifest.json
+          grep -A1 '"version": "1.2.0.0"' manifest.json
 
       - name: Commit manifest if changed
         run: |
@@ -53,20 +57,22 @@ jobs:
           if git diff --staged --quiet; then
             echo "No manifest change"
           else
-            git commit -m "chore: sync manifest checksum for v1.0.0.0 release"
+            git commit -m "chore: sync manifest checksum for v${PLUGIN_VER} release"
             git push origin main
           fi
 
       - name: Create release and upload zip
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0.0
-          name: v1.0.0.0 — Debrid / Stremio streams
+          tag_name: v${{ env.PLUGIN_VER }}
+          name: v${{ env.PLUGIN_VER }} — Debrid / Stremio streams
           body: |
-            Jellyfin plugin package for catalog install (`DebridStream_1.0.0.0.zip`).
+            Jellyfin plugin package: `DebridStream_${{ env.PLUGIN_VER }}.zip` (dll + meta.json).
 
-            Repository URL for Jellyfin: `https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
-          files: DebridStream_1.0.0.0.zip
+            **1.2.0.0:** dashboard Stream discovery (TMDB), discovery REST API, per-stream library sources, TMDB/TVDB→IMDb mapping, stream list cache.
+
+            Catalog URL: `https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
+          files: DebridStream_${{ env.PLUGIN_VER }}.zip
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
