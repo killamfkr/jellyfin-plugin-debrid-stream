@@ -9,6 +9,21 @@
             <div class="content-primary">
                 <h1>Stream discovery</h1>
                 <p class="fieldDescription" id="statusLine">Checking configuration…</p>
+                <div id="discoverSetupTmdb" class="hide" style="display:none;margin:1em 0;padding:1em;border-radius:8px;background:rgba(127,127,127,.12);">
+                    <p class="fieldDescription" style="margin-top:0;">
+                        <strong>TMDB API key</strong> is required for discovery (free from
+                        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org → Settings → API</a>).
+                        You can paste it here; it is stored in the same place as the main plugin settings.
+                    </p>
+                    <div class="inputContainer" style="max-width:480px;">
+                        <label for="discoverTmdbKey">TMDB API key</label>
+                        <input is="emby-input" type="password" id="discoverTmdbKey" autocomplete="off" />
+                    </div>
+                    <button type="button" is="emby-button" class="raised" id="discoverTmdbSave" style="margin-top:10px;">Save TMDB key</button>
+                </div>
+                <div id="discoverSetupOther" class="hide" style="display:none;margin:1em 0;" role="note">
+                    <p class="fieldDescription" id="discoverSetupOtherText"></p>
+                </div>
                 <div id="mainPanel" style="display:none;">
                     <div class="localnav localnav-tabs" style="margin-bottom:1em;">
                         <button type="button" is="emby-button" class="raised discover-tab active" data-tab="trending">Trending</button>
@@ -296,6 +311,43 @@
                     });
                 }
 
+                var PluginId = '7b2c9e41-5f8a-4d3e-9c1b-0a2b3c4d5e6f';
+
+                function applyDiscoverStatus(st) {
+                    var line = document.getElementById('statusLine');
+                    var panel = document.getElementById('mainPanel');
+                    var tmdbBox = document.getElementById('discoverSetupTmdb');
+                    var otherBox = document.getElementById('discoverSetupOther');
+                    var otherText = document.getElementById('discoverSetupOtherText');
+                    var ready = st.ready === true || st.Ready === true;
+                    var msg = st.message || st.Message;
+                    var hasTmdb = st.hasTmdbKey === true || st.HasTmdbKey === true;
+
+                    tmdbBox.style.display = 'none';
+                    otherBox.style.display = 'none';
+
+                    if (ready) {
+                        line.textContent = 'Browse TMDB, pick a title, then choose a stream. Uses the same addon and debrid settings as library playback.';
+                        panel.style.display = 'block';
+                        loadTrending();
+                        return;
+                    }
+
+                    line.textContent = msg || 'Discovery is not ready.';
+                    panel.style.display = 'none';
+
+                    if (!hasTmdb) {
+                        tmdbBox.style.display = 'block';
+                        ApiClient.getPluginConfiguration(PluginId).then(function (cfg) {
+                            var k = cfg.tmdbApiKey || cfg.TmdbApiKey || '';
+                            document.getElementById('discoverTmdbKey').value = k;
+                        });
+                    } else {
+                        otherBox.style.display = 'block';
+                        otherText.textContent = msg + ' Open Dashboard → Plugins → Debrid / Stremio streams, then use the gear icon (Settings) for the full form.';
+                    }
+                }
+
                 var overlaysWired = false;
                 document.querySelector('#discoverPage').addEventListener('pageshow', function () {
                     if (!overlaysWired) {
@@ -310,22 +362,24 @@
                             v.removeAttribute('src');
                             closeOv('overlayVideo');
                         });
+                        document.getElementById('discoverTmdbSave').addEventListener('click', function () {
+                            var val = document.getElementById('discoverTmdbKey').value.trim();
+                            Dashboard.showLoadingMsg();
+                            ApiClient.getPluginConfiguration(PluginId).then(function (cfg) {
+                                cfg.TmdbApiKey = val;
+                                cfg.tmdbApiKey = val;
+                                return ApiClient.updatePluginConfiguration(PluginId, cfg);
+                            }).then(function () {
+                                Dashboard.hideLoadingMsg();
+                                return api('GET', 'DebridStreamDiscovery/Status', null);
+                            }).then(applyDiscoverStatus).catch(function () {
+                                Dashboard.hideLoadingMsg();
+                                Dashboard.alert({ message: 'Could not save TMDB key.' });
+                            });
+                        });
                     }
 
-                    api('GET', 'DebridStreamDiscovery/Status', null).then(function (st) {
-                        var line = document.getElementById('statusLine');
-                        var panel = document.getElementById('mainPanel');
-                        var ready = st.ready === true || st.Ready === true;
-                        var msg = st.message || st.Message;
-                        if (ready) {
-                            line.textContent = 'Browse TMDB, pick a title, then choose a stream. Uses the same addon and debrid settings as library playback.';
-                            panel.style.display = 'block';
-                            loadTrending();
-                        } else {
-                            line.textContent = msg || 'Discovery is not ready.';
-                            panel.style.display = 'none';
-                        }
-                    }).catch(function () {
+                    api('GET', 'DebridStreamDiscovery/Status', null).then(applyDiscoverStatus).catch(function () {
                         document.getElementById('statusLine').textContent =
                             'Could not reach discovery API. Open this page from the dashboard while signed in.';
                     });

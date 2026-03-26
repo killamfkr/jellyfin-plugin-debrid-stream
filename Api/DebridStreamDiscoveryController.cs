@@ -63,19 +63,19 @@ public sealed class DebridStreamDiscoveryController : ControllerBase
         string? message = null;
         if (!hasTmdb)
         {
-            message = "Set a TMDB API key in the plugin settings (required for discovery).";
+            message = "TMDB API key is missing. Paste it on this page (Stream discovery) or under Dashboard → Plugins → Debrid / Stremio streams → Settings.";
         }
         else if (!config.EnableDebridStreams)
         {
-            message = "Enable debrid streams in the plugin settings.";
+            message = "Turn on \"Enable debrid stream source\" in Dashboard → Plugins → Debrid / Stremio streams → Settings.";
         }
         else if (!hasAddon)
         {
-            message = "Set a stream addon base URL.";
+            message = "Set \"Stream addon base URL\" in the Debrid / Stremio streams plugin settings.";
         }
         else if (!hasDebrid)
         {
-            message = "Set Real-Debrid or TorBox credentials.";
+            message = "Set Real-Debrid or TorBox credentials in the Debrid / Stremio streams plugin settings.";
         }
 
         return Ok(new DiscoveryStatusDto
