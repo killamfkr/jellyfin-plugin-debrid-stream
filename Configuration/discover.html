@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stream discovery</title>
+</head>
+<body>
+    <div id="discoverPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
+        <div data-role="content">
+            <div class="content-primary">
+                <h1>Stream discovery</h1>
+                <p class="fieldDescription" id="statusLine">Checking configuration…</p>
+                <div id="mainPanel" style="display:none;">
+                    <div class="localnav localnav-tabs" style="margin-bottom:1em;">
+                        <button type="button" is="emby-button" class="raised discover-tab active" data-tab="trending">Trending</button>
+                        <button type="button" is="emby-button" class="raised discover-tab" data-tab="search">Search</button>
+                    </div>
+                    <div id="panelTrending">
+                        <h2 style="margin-top:0;">Movies</h2>
+                        <div id="trendMovies" class="discover-grid"></div>
+                        <h2>TV</h2>
+                        <div id="trendTv" class="discover-grid"></div>
+                    </div>
+                    <div id="panelSearch" style="display:none;">
+                        <form id="searchForm" style="display:flex;gap:8px;align-items:center;margin-bottom:1em;flex-wrap:wrap;">
+                            <input is="emby-input" type="search" id="searchQuery" placeholder="Search TMDB…" style="min-width:220px;flex:1;" />
+                            <button is="emby-button" type="submit" class="raised">Search</button>
+                        </form>
+                        <div id="searchResults" class="discover-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="overlayStreams" class="discover-overlay" style="display:none;">
+            <div class="discover-overlay-box" onclick="event.stopPropagation();">
+                <div class="discover-overlay-head">
+                    <h2 class="discover-overlay-title" id="streamsTitle">Streams</h2>
+                    <button type="button" is="emby-button" class="raised btnCloseStreams">Close</button>
+                </div>
+                <div id="streamsList" class="discover-stream-list"></div>
+            </div>
+        </div>
+        <div id="overlaySeasons" class="discover-overlay" style="display:none;">
+            <div class="discover-overlay-box" onclick="event.stopPropagation();">
+                <div class="discover-overlay-head">
+                    <h2 class="discover-overlay-title" id="seasonsShowTitle">Seasons</h2>
+                    <button type="button" is="emby-button" class="raised btnCloseSeasons">Close</button>
+                </div>
+                <div id="seasonsList" class="discover-stream-list"></div>
+            </div>
+        </div>
+        <div id="overlayEpisodes" class="discover-overlay" style="display:none;">
+            <div class="discover-overlay-box" onclick="event.stopPropagation();">
+                <div class="discover-overlay-head">
+                    <h2 class="discover-overlay-title" id="episodesSeasonTitle">Episodes</h2>
+                    <button type="button" is="emby-button" class="raised btnCloseEpisodes">Close</button>
+                </div>
+                <div id="episodesList" class="discover-stream-list"></div>
+            </div>
+        </div>
+        <div id="overlayVideo" class="discover-overlay" style="display:none;">
+            <div class="discover-overlay-box discover-overlay-wide" onclick="event.stopPropagation();">
+                <div class="discover-overlay-head">
+                    <h2 class="discover-overlay-title">Playback</h2>
+                    <button type="button" is="emby-button" class="raised btnCloseVideo">Close</button>
+                </div>
+                <video id="discoverVideo" controls playsinline style="width:100%;max-height:70vh;background:#000;"></video>
+                <p class="fieldDescription">If in-browser playback fails (codec or headers), use a Jellyfin app or open the resolved URL elsewhere.</p>
+            </div>
+        </div>
+
+        <style>
+            .discover-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 1.5em; }
+            .discover-card {
+                width: 140px; cursor: pointer; border-radius: 6px; overflow: hidden;
+                background: rgba(127,127,127,.15); flex-shrink: 0;
+            }
+            .discover-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
+            .discover-card .meta { padding: 8px; font-size: 12px; line-height: 1.3; }
+            .discover-card .meta strong { display: block; }
+            .discover-stream-list button { display: block; width: 100%; text-align: left; margin-bottom: 8px; }
+            .discover-tab.active { opacity: 1; }
+            .discover-tab:not(.active) { opacity: .65; }
+            .discover-overlay {
+                position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 100000;
+                display: none; align-items: flex-start; justify-content: center; overflow: auto; padding: 24px;
+            }
+            .discover-overlay-box {
+                background: rgba(32,32,32,.98); border-radius: 8px; padding: 16px; max-width: 520px; width: 100%;
+                margin-top: 24px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+            }
+            .discover-overlay-wide { max-width: 900px; }
+            .discover-overlay-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+            .discover-overlay-title { margin: 0; font-size: 1.1em; font-weight: 600; flex: 1; }
+        </style>
+        <script type="text/javascript">
+            (function () {
+                function openOv(el) {
+                    if (typeof el === 'string') { el = document.getElementById(el); }
+                    if (el) { el.style.display = 'flex'; }
+                }
+                function closeOv(el) {
+                    if (typeof el === 'string') { el = document.getElementById(el); }
+                    if (el) { el.style.display = 'none'; }
+                }
+
+                function wireOverlayClose(overlayId, btnClass) {
+                    var ov = document.getElementById(overlayId);
+                    if (!ov) { return; }
+                    ov.addEventListener('click', function () { closeOv(ov); });
+                    var btn = ov.querySelector(btnClass);
+                    if (btn) { btn.addEventListener('click', function (e) { e.stopPropagation(); closeOv(ov); }); }
+                }
+
+                var api = function (method, path, query, body) {
+                    var url = ApiClient.getUrl(path);
+                    if (query) {
+                        url += (url.indexOf('?') === -1 ? '?' : '&') + query;
+                    }
+                    return ApiClient.ajax({
+                        type: method,
+                        url: url,
+                        dataType: 'json',
+                        contentType: body ? 'application/json' : undefined,
+                        data: body ? JSON.stringify(body) : undefined
+                    });
+                };
+
+                function esc(s) {
+                    if (!s) { return ''; }
+                    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+                }
+
+                function card(item, onClick) {
+                    var el = document.createElement('div');
+                    el.className = 'discover-card';
+                    el.innerHTML = '<img src="' + esc(item.posterUrl || '') + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"/>' +
+                        '<div class="meta"><strong>' + esc(item.title) + '</strong>' +
+                        (item.releaseYear ? esc(String(item.releaseYear)) : '') + '</div>';
+                    el.addEventListener('click', onClick);
+                    return el;
+                }
+
+                function loadTrending() {
+                    api('GET', 'DebridStreamDiscovery/Trending', 'timeWindow=day').then(function (data) {
+                        var m = document.getElementById('trendMovies');
+                        var t = document.getElementById('trendTv');
+                        m.innerHTML = '';
+                        t.innerHTML = '';
+                        var movies = data.movies || data.Movies || [];
+                        var tv = data.tv || data.Tv || [];
+                        movies.forEach(function (item) {
+                            m.appendChild(card(item, function () { openMovieStreams(item); }));
+                        });
+                        tv.forEach(function (item) {
+                            t.appendChild(card(item, function () { openTvShow(item); }));
+                        });
+                    }).catch(function () {
+                        Dashboard.alert({ message: 'Failed to load trending.' });
+                    });
+                }
+
+                function openMovieStreams(item) {
+                    document.getElementById('streamsTitle').textContent = item.title || 'Streams';
+                    document.getElementById('streamsList').innerHTML = 'Loading…';
+                    openOv('overlayStreams');
+                    var tid = item.tmdbId != null ? item.tmdbId : item.TmdbId;
+                    api('GET', 'DebridStreamDiscovery/Movie/' + tid + '/Streams', null).then(function (rows) {
+                        renderStreams(rows);
+                    }).catch(function () {
+                        document.getElementById('streamsList').innerHTML = '<p class="fieldDescription">No streams or error.</p>';
+                    });
+                }
+
+                var tvContext = null;
+
+                function openTvShow(item) {
+                    tvContext = {
+                        tmdbTvId: item.tmdbId != null ? item.tmdbId : item.TmdbId,
+                        title: item.title
+                    };
+                    document.getElementById('seasonsShowTitle').textContent = item.title || 'Seasons';
+                    document.getElementById('seasonsList').innerHTML = 'Loading…';
+                    openOv('overlaySeasons');
+                    api('GET', 'DebridStreamDiscovery/Tv/' + tvContext.tmdbTvId + '/Seasons', null).then(function (seasons) {
+                        var list = document.getElementById('seasonsList');
+                        list.innerHTML = '';
+                        seasons.forEach(function (s) {
+                            var sn = s.seasonNumber != null ? s.seasonNumber : s.SeasonNumber;
+                            var name = s.name || s.Name;
+                            var ec = s.episodeCount != null ? s.episodeCount : s.EpisodeCount;
+                            var b = document.createElement('button');
+                            b.type = 'button';
+                            b.is = 'emby-button';
+                            b.className = 'raised block';
+                            b.textContent = name + ' (' + ec + ' eps)';
+                            b.addEventListener('click', function (e) {
+                                e.stopPropagation();
+                                closeOv('overlaySeasons');
+                                openEpisodes(sn);
+                            });
+                            list.appendChild(b);
+                        });
+                    }).catch(function () {
+                        document.getElementById('seasonsList').innerHTML = '<p class="fieldDescription">Failed to load seasons.</p>';
+                    });
+                }
+
+                function openEpisodes(seasonNumber) {
+                    if (!tvContext) { return; }
+                    document.getElementById('episodesSeasonTitle').textContent =
+                        (tvContext.title || '') + ' — Season ' + seasonNumber;
+                    document.getElementById('episodesList').innerHTML = 'Loading…';
+                    openOv('overlayEpisodes');
+                    api('GET', 'DebridStreamDiscovery/Tv/' + tvContext.tmdbTvId + '/Season/' + seasonNumber + '/Episodes', null)
+                        .then(function (eps) {
+                            var list = document.getElementById('episodesList');
+                            list.innerHTML = '';
+                            eps.forEach(function (ep) {
+                                var en = ep.episodeNumber != null ? ep.episodeNumber : ep.EpisodeNumber;
+                                var title = ep.title || ep.Title;
+                                var b = document.createElement('button');
+                                b.type = 'button';
+                                b.is = 'emby-button';
+                                b.className = 'raised block';
+                                b.textContent = en + '. ' + title;
+                                b.addEventListener('click', function (e) {
+                                    e.stopPropagation();
+                                    closeOv('overlayEpisodes');
+                                    openTvStreams(seasonNumber, en);
+                                });
+                                list.appendChild(b);
+                            });
+                        }).catch(function () {
+                            document.getElementById('episodesList').innerHTML = '<p class="fieldDescription">Failed to load episodes.</p>';
+                        });
+                }
+
+                function openTvStreams(season, episode) {
+                    if (!tvContext) { return; }
+                    var title = (tvContext.title || '') + ' S' + season + 'E' + episode;
+                    document.getElementById('streamsTitle').textContent = title;
+                    document.getElementById('streamsList').innerHTML = 'Loading…';
+                    openOv('overlayStreams');
+                    var q = 'season=' + encodeURIComponent(season) + '&episode=' + encodeURIComponent(episode);
+                    api('GET', 'DebridStreamDiscovery/Tv/' + tvContext.tmdbTvId + '/Streams', q).then(function (rows) {
+                        renderStreams(rows);
+                    }).catch(function () {
+                        document.getElementById('streamsList').innerHTML = '<p class="fieldDescription">No streams or error.</p>';
+                    });
+                }
+
+                function renderStreams(rows) {
+                    var list = document.getElementById('streamsList');
+                    list.innerHTML = '';
+                    if (!rows || !rows.length) {
+                        list.innerHTML = '<p class="fieldDescription">No streams returned by the addon.</p>';
+                        return;
+                    }
+                    rows.forEach(function (row) {
+                        var name = row.name || row.Name;
+                        var url = row.url || row.Url;
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.is = 'emby-button';
+                        b.className = 'raised block';
+                        b.textContent = name;
+                        b.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            resolveAndPlay(url);
+                        });
+                        list.appendChild(b);
+                    });
+                }
+
+                function resolveAndPlay(streamUrl) {
+                    Dashboard.showLoadingMsg();
+                    api('POST', 'DebridStreamDiscovery/Resolve', null, { url: streamUrl }).then(function (res) {
+                        Dashboard.hideLoadingMsg();
+                        var playbackUrl = res.playbackUrl || res.PlaybackUrl;
+                        if (!playbackUrl) {
+                            Dashboard.alert({ message: 'No playback URL returned.' });
+                            return;
+                        }
+                        var v = document.getElementById('discoverVideo');
+                        v.pause();
+                        v.removeAttribute('src');
+                        v.load();
+                        v.src = playbackUrl;
+                        closeOv('overlayStreams');
+                        openOv('overlayVideo');
+                        v.play().catch(function () { });
+                    }).catch(function (err) {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert({ message: (err && err.message) ? err.message : 'Resolve failed.' });
+                    });
+                }
+
+                var overlaysWired = false;
+                document.querySelector('#discoverPage').addEventListener('pageshow', function () {
+                    if (!overlaysWired) {
+                        overlaysWired = true;
+                        wireOverlayClose('overlayStreams', '.btnCloseStreams');
+                        wireOverlayClose('overlaySeasons', '.btnCloseSeasons');
+                        wireOverlayClose('overlayEpisodes', '.btnCloseEpisodes');
+                        wireOverlayClose('overlayVideo', '.btnCloseVideo');
+                        document.getElementById('overlayVideo').addEventListener('click', function () {
+                            var v = document.getElementById('discoverVideo');
+                            v.pause();
+                            v.removeAttribute('src');
+                            closeOv('overlayVideo');
+                        });
+                    }
+
+                    api('GET', 'DebridStreamDiscovery/Status', null).then(function (st) {
+                        var line = document.getElementById('statusLine');
+                        var panel = document.getElementById('mainPanel');
+                        var ready = st.ready === true || st.Ready === true;
+                        var msg = st.message || st.Message;
+                        if (ready) {
+                            line.textContent = 'Browse TMDB, pick a title, then choose a stream. Uses the same addon and debrid settings as library playback.';
+                            panel.style.display = 'block';
+                            loadTrending();
+                        } else {
+                            line.textContent = msg || 'Discovery is not ready.';
+                            panel.style.display = 'none';
+                        }
+                    }).catch(function () {
+                        document.getElementById('statusLine').textContent =
+                            'Could not reach discovery API. Open this page from the dashboard while signed in.';
+                    });
+                });
+
+                document.querySelectorAll('.discover-tab').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        document.querySelectorAll('.discover-tab').forEach(function (b) { b.classList.remove('active'); });
+                        btn.classList.add('active');
+                        var tab = btn.getAttribute('data-tab');
+                        document.getElementById('panelTrending').style.display = tab === 'trending' ? 'block' : 'none';
+                        document.getElementById('panelSearch').style.display = tab === 'search' ? 'block' : 'none';
+                    });
+                });
+
+                document.getElementById('searchForm').addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var q = document.getElementById('searchQuery').value.trim();
+                    if (!q) { return; }
+                    var box = document.getElementById('searchResults');
+                    box.innerHTML = 'Searching…';
+                    api('GET', 'DebridStreamDiscovery/Search', 'q=' + encodeURIComponent(q)).then(function (rows) {
+                        box.innerHTML = '';
+                        if (!rows || !rows.length) {
+                            box.innerHTML = '<p class="fieldDescription">No results.</p>';
+                            return;
+                        }
+                        rows.forEach(function (item) {
+                            var mt = item.mediaType || item.MediaType;
+                            box.appendChild(card(item, function () {
+                                if (mt === 'movie') {
+                                    openMovieStreams(item);
+                                } else {
+                                    openTvShow(item);
+                                }
+                            }));
+                        });
+                    }).catch(function () {
+                        box.innerHTML = '<p class="fieldDescription">Search failed.</p>';
+                    });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

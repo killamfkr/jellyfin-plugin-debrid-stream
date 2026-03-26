@@ -16,6 +16,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
@@ -30,6 +34,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Configuration\config.html" />
+    <EmbeddedResource Include="Configuration\discover.html" />
   </ItemGroup>
 
   <ItemGroup>

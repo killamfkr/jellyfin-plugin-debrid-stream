@@ -34,7 +34,7 @@ public class Plugin : BasePlugin<DebridStreamPluginConfiguration>, IHasWebPages
 
     /// <inheritdoc />
     public override string Description =>
-        "Lists streams from a Stremio-style addon as separate playable sources (link picker). Maps IMDb from metadata or TMDB/TVDB via optional TMDB API; resolves through Real-Debrid or TorBox.";
+        "Library link picker plus dashboard Stream discovery (TMDB browse without library files). Stremio addon + Real-Debrid or TorBox; optional TMDB API for ids.";
 
     /// <inheritdoc />
     public override string ConfigurationFileName => "Jellyfin.Plugin.DebridStream.xml";
@@ -46,6 +46,16 @@ public class Plugin : BasePlugin<DebridStreamPluginConfiguration>, IHasWebPages
         {
             Name = Name,
             EmbeddedResourcePath = GetType().Namespace + ".Configuration.config.html"
+        };
+
+        yield return new PluginPageInfo
+        {
+            Name = "Stream discovery",
+            DisplayName = "Stream discovery",
+            EmbeddedResourcePath = GetType().Namespace + ".Configuration.discover.html",
+            EnableInMainMenu = true,
+            MenuSection = "server",
+            MenuIcon = "search"
         };
     }
 }
