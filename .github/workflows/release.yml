@@ -1,0 +1,72 @@
+# Run manually: Actions → "Publish release v1.0.0.0" → Run workflow
+# Creates tag v1.0.0.0, uploads DebridStream_1.0.0.0.zip, updates manifest.json checksum on main.
+
+name: Publish release v1.0.0.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-v1
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Publish
+        run: dotnet publish -c Release -o "${{ github.workspace }}/out"
+
+      - name: Build zip
+        run: |
+          cd out
+          zip -q ../DebridStream_1.0.0.0.zip Jellyfin.Plugin.DebridStream.dll meta.json
+          cd ..
+          md5sum DebridStream_1.0.0.0.zip
+
+      - name: Update manifest.json checksum
+        run: |
+          NEW=$(md5sum DebridStream_1.0.0.0.zip | awk '{print $1}')
+          echo "New checksum: $NEW"
+          sed -i "s/\"checksum\": \"[a-fA-F0-9]*\"/\"checksum\": \"$NEW\"/" manifest.json
+          grep checksum manifest.json
+
+      - name: Commit manifest if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if git diff --staged --quiet; then
+            echo "No manifest change"
+          else
+            git commit -m "chore: sync manifest checksum for v1.0.0.0 release"
+            git push origin main
+          fi
+
+      - name: Create release and upload zip
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0.0
+          name: v1.0.0.0 — Debrid / Stremio streams
+          body: |
+            Jellyfin plugin package for catalog install (`DebridStream_1.0.0.0.zip`).
+
+            Repository URL for Jellyfin: `https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
+          files: DebridStream_1.0.0.0.zip
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
