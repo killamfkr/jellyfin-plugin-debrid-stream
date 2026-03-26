@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 & $PSScriptRoot\publish.ps1
 $pub = Join-Path $PSScriptRoot 'publish'
-$ver = '1.2.0.0'
+$ver = '1.2.0.1'
 $zip = Join-Path $PSScriptRoot "DebridStream_$ver.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path (Join-Path $pub 'Jellyfin.Plugin.DebridStream.dll'), (Join-Path $pub 'meta.json') -DestinationPath $zip -Force

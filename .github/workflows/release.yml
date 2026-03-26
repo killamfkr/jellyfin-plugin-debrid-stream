@@ -1,5 +1,5 @@
 # Run manually: Actions → "Publish plugin release" → Run workflow
-# Builds DebridStream_1.2.0.0.zip, updates manifest checksum for 1.2.0.0, pushes main, creates tag v1.2.0.0 + release.
+# Builds DebridStream_{PLUGIN_VER}.zip, updates manifest checksum for that version, pushes main, creates tag + release.
 
 name: Publish plugin release
 
@@ -17,7 +17,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      PLUGIN_VER: "1.2.0.0"
+      PLUGIN_VER: "1.2.0.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
           jq --arg c "$NEW" --arg v "${PLUGIN_VER}" \
             '(.[0].versions |= map(if .version == $v then .checksum = $c else . end))' manifest.json > manifest.tmp
           mv manifest.tmp manifest.json
-          grep -A1 '"version": "1.2.0.0"' manifest.json
+          grep -A1 "\"version\": \"${PLUGIN_VER}\"" manifest.json
 
       - name: Commit manifest if changed
         run: |
@@ -69,7 +69,8 @@ jobs:
           body: |
             Jellyfin plugin package: `DebridStream_${{ env.PLUGIN_VER }}.zip` (dll + meta.json).
 
-            **1.2.0.0:** dashboard Stream discovery (TMDB), discovery REST API, per-stream library sources, TMDB/TVDB→IMDb mapping, stream list cache.
+            **1.2.0.1:** Stream discovery TMDB key on-page + clearer setup messages.  
+            **1.2.0.0:** dashboard discovery (TMDB), REST API, per-stream library sources, TMDB/TVDB→IMDb, cache.
 
             Catalog URL: `https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
           files: DebridStream_${{ env.PLUGIN_VER }}.zip

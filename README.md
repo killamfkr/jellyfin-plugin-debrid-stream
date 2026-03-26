@@ -49,8 +49,8 @@ Jellyfin does **not** use your GitHub repo URL. It needs the raw **`manifest.jso
 `https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
 
 1. In Jellyfin: **Dashboard → Plugins → Repositories** → add that URL (not `github.com/...` without `raw.githubusercontent.com`).
-2. The manifest points at **`.zip`** assets on **GitHub Releases**. Latest is **`v1.2.0.0`** / **`DebridStream_1.2.0.0.zip`** (run **`.\pack-release.ps1`** locally, use the **Publish plugin release** workflow, or download the **`DebridStream_1.2.0.0.zip`** artifact from the **Build plugin** workflow).
-3. The **`checksum`** in `manifest.json` for each version must be the **MD5** (lowercase hex) of that version’s zip. The release workflow updates the **1.2.0.0** checksum automatically after building on Linux.
+2. The manifest points at **`.zip`** assets on **GitHub Releases**. Latest is **`v1.2.0.1`** / **`DebridStream_1.2.0.1.zip`** (run **`.\pack-release.ps1`** locally, use the **Publish plugin release** workflow, or download the **`DebridStream_1.2.0.1.zip`** artifact from the **Build plugin** workflow).
+3. The **`checksum`** in `manifest.json` for each version must be the **MD5** (lowercase hex) of that version’s zip. The release workflow updates the matching version’s checksum automatically after building on Linux.
 
 If you see **“An error occurred while getting the plugin details from the repository”**, the server usually cannot load or parse the manifest URL (wrong link, typo, or file missing on `main`).
 
