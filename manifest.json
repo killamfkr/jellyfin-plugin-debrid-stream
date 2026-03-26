@@ -12,7 +12,7 @@
         "changelog": "Dashboard Stream discovery (TMDB) and discovery REST API; per-stream library picker; TMDB/TVDB to IMDb mapping; stream list cache.\n",
         "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/killamfkr/jellyfin-plugin-debrid-stream/releases/download/v1.2.0.0/DebridStream_1.2.0.0.zip",
-        "checksum": "00000000000000000000000000000000",
+        "checksum": "8eb0e055ec9852f1248ef6528c8b8144",
         "timestamp": "2026-03-26T00:00:00Z"
       },
       {
