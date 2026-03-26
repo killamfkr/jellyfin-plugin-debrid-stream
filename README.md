@@ -36,9 +36,23 @@ Install files from **`publish/`**:
 
 ## Install in Jellyfin
 
+### Manual (copy files)
+
 1. Under Jellyfin’s [plugin directory](https://jellyfin.org/docs/general/administration/configuration/#directory-structure), create a folder (e.g. `DebridStream_1.0.0`).
 2. Copy **`Jellyfin.Plugin.DebridStream.dll`** and **`meta.json`** into it.
 3. Restart Jellyfin → **Dashboard → Plugins** → configure **Debrid / Stremio streams**.
+
+### Plugin catalog (“repository” in the dashboard)
+
+Jellyfin does **not** use your GitHub repo URL. It needs the raw **`manifest.json`** URL:
+
+`https://raw.githubusercontent.com/killamfkr/jellyfin-plugin-debrid-stream/main/manifest.json`
+
+1. In Jellyfin: **Dashboard → Plugins → Repositories** → add that URL (not `github.com/...` without `raw.githubusercontent.com`).
+2. The manifest points at a **`.zip`** on **GitHub Releases**. Create a release tagged **`v1.0.0.0`** and attach **`DebridStream_1.0.0.0.zip`** (run **`.\pack-release.ps1`** locally, or use the **`DebridStream_1.0.0.0.zip`** artifact from GitHub Actions).
+3. The **`checksum`** in `manifest.json` must be the **MD5** of that exact zip. If you change the zip, recompute MD5 and update `manifest.json` (Actions log prints `md5sum` after each build).
+
+If you see **“An error occurred while getting the plugin details from the repository”**, the server usually cannot load or parse the manifest URL (wrong link, typo, or file missing on `main`).
 
 ## GitHub Actions
 

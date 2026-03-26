@@ -6,6 +6,7 @@
 publish/
 out/
 artifacts/
+DebridStream_*.zip
 *.user
 *.suo
 .vs/
